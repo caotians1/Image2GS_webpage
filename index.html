@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Masks make discriminative models great again!</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #fafafa;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding: 40px 0;
+            background: linear-gradient(135deg, #6b7c6b 0%, #5a6e5a 100%);
+            color: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+            font-style: italic;
+        }
+        
+        .authors {
+            font-size: 1.1em;
+            margin-top: 20px;
+            line-height: 1.6;
+            opacity: 0.95;
+        }
+        
+        .authors .author-name {
+            font-weight: 500;
+        }
+        
+        .authors .affiliation {
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+        
+        .authors .footnote {
+            font-size: 0.85em;
+            font-style: italic;
+        }
+        
+        .paper-link {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .paper-link a {
+            display: inline-block;
+            background: linear-gradient(135deg, #6b7c6b 0%, #5a6e5a 100%);
+            color: white;
+            text-decoration: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(107, 124, 107, 0.3);
+        }
+        
+        .paper-link a:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(107, 124, 107, 0.4);
+        }
+        
+        .citation-box {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.4;
+            color: #495057;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            font-size: 0.85em;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .results-table caption {
+            caption-side: top;
+            padding: 15px;
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #4a5568;
+            text-align: center;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .results-table th {
+            background: linear-gradient(135deg, #6b7c6b 0%, #5a6e5a 100%);
+            color: white;
+            padding: 12px 8px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.9em;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .results-table td {
+            padding: 10px 8px;
+            text-align: center;
+            border: 1px solid #e9ecef;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .results-table tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        .results-table tbody tr:hover {
+            background-color: #e3f2fd;
+        }
+        
+        .setting-cell {
+            background: #f1f3f4 !important;
+            font-weight: 600;
+            color: #4a5568;
+            text-align: center;
+            vertical-align: middle;
+            font-family: 'Georgia', 'Times New Roman', serif !important;
+        }
+        
+        .model-cell {
+            background: #f8f9fa !important;
+            font-weight: 500;
+            color: #4a5568;
+            text-align: left;
+            padding-left: 15px !important;
+            font-family: 'Georgia', 'Times New Roman', serif !important;
+        }
+        
+        .model-cell.best {
+            background: #e8f5e8 !important;
+            color: #2e7d2e;
+        }
+        
+        .best-score {
+            background: #e8f5e8 !important;
+            color: #2e7d2e;
+            font-weight: 600;
+        }
+        
+        .section {
+            background: white;
+            margin-bottom: 40px;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        
+        .section h2 {
+            color: #4a5568;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            border-bottom: 3px solid #6b7c6b;
+            padding-bottom: 10px;
+        }
+        
+ .abstract {
+            font-size: 1.1em;
+            text-align: justify;
+            color: #2d3748;
+            line-height: 1.8;
+        }
+        
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(256px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .example {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .example:hover {
+            transform: translateY(-5px);
+        }
+        
+        .example img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .example-caption {
+            padding: 15px;
+            background: #f7fafc;
+            font-size: 0.9em;
+            color: #4a5568;
+            text-align: center;
+        }
+        
+        .load-more {
+            text-align: center;
+            margin-top: 30px;
+        }
+        
+        .load-more button {
+            background: linear-gradient(135deg, #6b7c6b 0%, #5a6e5a 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+        
+        .load-more button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(107, 124, 107, 0.4);
+        }
+        
+        footer {
+            text-align: center;
+            padding: 40px 0;
+            color: #718096;
+            border-top: 1px solid #e2e8f0;
+            margin-top: 60px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .section {
+                padding: 20px;
+            }
+            
+            .gallery {
+                grid-template-columns: 1fr;
+            }
+            
+            .results-table {
+                font-size: 0.75em;
+            }
+            
+            .results-table th,
+            .results-table td {
+                padding: 6px 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Masks make discriminative models great again!</h1>
+            <p class="subtitle">Reconstructing Photorealistic 3D Scenes from Single Images</p>
+            <div class="authors">
+                <div>
+                    <span class="author-name">Tianshi Cao</span><sup>1</sup><span class="footnote">*</span> &nbsp;&nbsp;
+                    <span class="author-name">Marie-Julie Rakotosaona</span><sup>2</sup> &nbsp;&nbsp;
+                    <span class="author-name">Ben Poole</span><sup>2</sup> &nbsp;&nbsp;
+                    <span class="author-name">Federico Tombari</span><sup>2</sup> &nbsp;&nbsp;
+                    <span class="author-name">Michael Niemeyer</span><sup>2</sup>
+                </div>
+                <div class="affiliation">
+                    <sup>1</sup> University of Toronto &nbsp;&nbsp;&nbsp; <sup>2</sup> Google
+                </div>
+                <div class="footnote">
+                    * Work done during internship at Google
+                </div>
+            </div>
+        </header>
+
+        <div class="section">
+            <h2>Abstract</h2>
+            <p class="abstract">
+                We present Image2GS, a novel approach that addresses the challenging problem of reconstructing photorealistic 3D scenes from a single image by focusing specifically on the image-to-3D lifting component of the reconstruction process. By decoupling the lifting problem (converting an image to a 3D model representing what is visible) from the completion problem (hallucinating content not present in the input), we create a more deterministic task suitable for discriminative models. Our method employs visibility masks derived from optimized 3D Gaussian splats to exclude areas not visible from the source view during training. This masked training strategy significantly improves reconstruction quality in visible regions compared to strong baselines. Notably, despite being trained only on masked regions, Image2GS remains competitive with state-of-the-art discriminative models trained on full target images when evaluated on complete scenes. Our findings highlight the fundamental struggle discriminative models face when fitting unseen regions and demonstrate the advantages of addressing image-to-3D lifting as a distinct problem with specialized techniques.
+            </p>
+            
+            <div class="paper-link">
+                <a href="https://generative-vision.github.io/workshop-CVPR-25/papers/32.pdf" target="_blank">📄 Read the Paper</a>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Quantitative Results</h2>
+            <p style="margin-bottom: 20px; color: #4a5568;">
+                Training with obstruction masking significantly improves reconstruction quality, achieving near-perfect reconstruction of the input view with a ~10 dB improvement in PSNR, and significantly reducing SSIM across all views.
+                We compare Image2GS trained with and without masking on RealEstate10K under different target view settings below. Note that LPIPS is not measured for 3D Lifting as maksing of obstructed regions interferes with LPIPS feature extraction.
+            </p>
+            
+            <div class="table-container">
+                <table class="results-table">
+                    <caption>Comparing Image2GS trained with masking versus without masking on RealEstate10K under different target view settings.</caption>
+                    <thead>
+                        <tr>
+                            <th rowspan="2">Setting</th>
+                            <th rowspan="2">Model</th>
+                            <th colspan="3">Input frame</th>
+                            <th colspan="3">5 frames</th>
+                            <th colspan="3">10 frames</th>
+                            <th colspan="3">𝒰[-30,30] frames</th>
+                        </tr>
+                        <tr>
+                            <th>PSNR ↑</th>
+                            <th>SSIM ↑</th>
+                            <th>LPIPS ↓</th>
+                            <th>PSNR ↑</th>
+                            <th>SSIM ↑</th>
+                            <th>LPIPS ↓</th>
+                            <th>PSNR ↑</th>
+                            <th>SSIM ↑</th>
+                            <th>LPIPS ↓</th>
+                            <th>PSNR ↑</th>
+                            <th>SSIM ↑</th>
+                            <th>LPIPS ↓</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td rowspan="2" class="setting-cell">3D Completion</td>
+                            <td class="model-cell">No mask</td>
+                            <td>32.72</td>
+                            <td>0.943</td>
+                            <td>0.095</td>
+                            <td>26.96</td>
+                            <td>0.855</td>
+                            <td>0.209</td>
+                            <td>24.40</td>
+                            <td>0.813</td>
+                            <td>0.277</td>
+                            <td>24.50</td>
+                            <td>0.802</td>
+                            <td>0.225</td>
+                        </tr>
+                        <tr>
+                            <td class="model-cell best">With mask</td>
+                            <td class="best-score">42.57</td>
+                            <td class="best-score">0.993</td>
+                            <td class="best-score">0.005</td>
+                            <td class="best-score">28.02</td>
+                            <td class="best-score">0.878</td>
+                            <td class="best-score">0.061</td>
+                            <td class="best-score">24.57</td>
+                            <td class="best-score">0.820</td>
+                            <td class="best-score">0.105</td>
+                            <td class="best-score">25.30</td>
+                            <td class="best-score">0.827</td>
+                            <td class="best-score">0.112</td>
+                        </tr>
+                        <tr>
+                            <td rowspan="2" class="setting-cell">3D Lifting</td>
+                            <td class="model-cell">No mask</td>
+                            <td>32.72</td>
+                            <td>0.943</td>
+                            <td>-</td>
+                            <td>33.60</td>
+                            <td>0.919</td>
+                            <td>-</td>
+                            <td>31.35</td>
+                            <td>0.895</td>
+                            <td>-</td>
+                            <td>32.20</td>
+                            <td>0.902</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td class="model-cell best">With mask</td>
+                            <td class="best-score">42.57</td>
+                            <td class="best-score">0.993</td>
+                            <td>-</td>
+                            <td class="best-score">34.84</td>
+                            <td class="best-score">0.935</td>
+                            <td>-</td>
+                            <td class="best-score">31.95</td>
+                            <td class="best-score">0.908</td>
+                            <td>-</td>
+                            <td class="best-score">33.05</td>
+                            <td class="best-score">0.915</td>
+                            <td>-</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+                       
+            <h3 style="margin: 40px 0 20px 0; color: #4a5568; font-size: 1.4em;">Comparison with State-of-the-Art Methods</h3>
+            <p style="margin-bottom: 20px; color: #4a5568;">
+                Remarkably, while all other methods are trained for 3D reconstruction using full target images, Image2GS with masking is trained exclusively on masked target images (visible regions only). Despite this significant gap between training and evaluation, Image2GS demonstrates competitive performance when evaluated on full images, highlighting the effectiveness of our masked training approach.
+            </p>
+            
+            <div class="table-container">
+                <table class="results-table">
+                    <caption>Image2GS shows state-of-the-art in-domain performance on RealEstate10K on small, medium and large baseline ranges. Performance of prior methods are taken from Szymanowicz et al. (Flash3D).</caption>
+                    <thead>
+                        <tr>
+                            <th rowspan="2">Model</th>
+                            <th colspan="3">5 frames</th>
+                            <th colspan="3">10 frames</th>
+                            <th colspan="3">𝒰[-30,30] frames</th>
+                        </tr>
+                        <tr>
+                            <th>PSNR ↑</th>
+                            <th>SSIM ↑</th>
+                            <th>LPIPS ↓</th>
+                            <th>PSNR ↑</th>
+                            <th>SSIM ↑</th>
+                            <th>LPIPS ↓</th>
+                            <th>PSNR ↑</th>
+                            <th>SSIM ↑</th>
+                            <th>LPIPS ↓</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="model-cell">SV-MPI</td>
+                            <td>27.10</td>
+                            <td>0.870</td>
+                            <td>-</td>
+                            <td>24.40</td>
+                            <td>0.812</td>
+                            <td>-</td>
+                            <td>23.52</td>
+                            <td>0.785</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td class="model-cell">BTS</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>24.00</td>
+                            <td>0.755</td>
+                            <td>0.194</td>
+                        </tr>
+                        <tr>
+                            <td class="model-cell">Splatter Image</td>
+                            <td>28.15</td>
+                            <td>0.894</td>
+                            <td>0.110</td>
+                            <td>25.34</td>
+                            <td>0.842</td>
+                            <td>0.144</td>
+                            <td>24.15</td>
+                            <td>0.810</td>
+                            <td>0.177</td>
+                        </tr>
+                        <tr>
+                            <td class="model-cell">MINE</td>
+                            <td>28.45</td>
+                            <td>0.897</td>
+                            <td>0.111</td>
+                            <td>25.89</td>
+                            <td>0.850</td>
+                            <td>0.150</td>
+                            <td>24.75</td>
+                            <td>0.820</td>
+                            <td>0.179</td>
+                        </tr>
+                        <tr>
+                            <td class="model-cell">Flash3D</td>
+                            <td class="best-score">28.46</td>
+                            <td class="best-score">0.899</td>
+                            <td>0.100</td>
+                            <td class="best-score">25.94</td>
+                            <td class="best-score">0.857</td>
+                            <td>0.133</td>
+                            <td>24.93</td>
+                            <td class="best-score">0.833</td>
+                            <td>0.160</td>
+                        </tr>
+                        <tr style="border-top: 2px solid #6b7c6b;">
+                            <td class="model-cell">Image2GS no masking</td>
+                            <td>26.97</td>
+                            <td>0.855</td>
+                            <td>0.158</td>
+                            <td>24.40</td>
+                            <td>0.813</td>
+                            <td>0.205</td>
+                            <td>24.50</td>
+                            <td>0.802</td>
+                            <td>0.219</td>
+                        </tr>
+                        <tr>
+                            <td class="model-cell best">Image2GS</td>
+                            <td>28.02</td>
+                            <td>0.878</td>
+                            <td class="best-score">0.061</td>
+                            <td>24.57</td>
+                            <td>0.820</td>
+                            <td class="best-score">0.105</td>
+                            <td class="best-score">25.30</td>
+                            <td>0.827</td>
+                            <td class="best-score">0.112</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <p style="margin-top: 20px; color: #4a5568; font-size: 0.9em;">
+                <strong>Key findings:</strong> Despite being trained exclusively on masked target images while all other methods use full target images, Image2GS achieves competitive performance across all metrics and excels in LPIPS scores, achieving best-in-class perceptual quality when evaluated on full images.
+            </p>
+            
+        </div>
+
+        <div class="section">
+            <h2>Results Gallery</h2>
+            <p style="margin-bottom: 20px; color: #4a5568;">
+                Below are examples of our method reconstructing 3D scenes from single images. Each animation shows the trajectory of camera views around the reconstructed 3D scene.
+            </p>
+            
+            <div class="gallery" id="gallery">
+                <div class="example">
+                    <img src="viz/a0a36e84cd27c3ba_traj_all_target_preds.gif" alt="3D Scene Reconstruction Example 1" loading="lazy">
+                    <div class="example-caption">3D Scene Reconstruction - Example 1</div>
+                </div>
+                
+                <div class="example">
+                    <img src="viz/0df123f66dbcd774_traj_all_target_preds.gif" alt="3D Scene Reconstruction Example 2" loading="lazy">
+                    <div class="example-caption">3D Scene Reconstruction - Example 2</div>
+                </div>
+                
+                <div class="example">
+                    <img src="viz/cb50a671ea7144bb_traj_all_target_preds.gif" alt="3D Scene Reconstruction Example 3" loading="lazy">
+                    <div class="example-caption">3D Scene Reconstruction - Example 3</div>
+                </div>
+                
+                <div class="example">
+                    <img src="viz/1fe394077e7c3de0_traj_all_target_preds.gif" alt="3D Scene Reconstruction Example 4" loading="lazy">
+                    <div class="example-caption">3D Scene Reconstruction - Example 4</div>
+                </div>
+                
+                <div class="example">
+                    <img src="viz/7f6560149c0bac41_traj_all_target_preds.gif" alt="3D Scene Reconstruction Example 5" loading="lazy">
+                    <div class="example-caption">3D Scene Reconstruction - Example 5</div>
+                </div>
+                
+                <div class="example">
+                    <img src="viz/1ec6fa3de6fa1bf0_traj_all_target_preds.gif" alt="3D Scene Reconstruction Example 6" loading="lazy">
+                    <div class="example-caption">3D Scene Reconstruction - Example 6</div>
+                </div>
+            </div>
+            
+            <div class="load-more">
+                <button onclick="loadMoreExamples()">Load More Examples</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Citation</h2>
+            <p style="margin-bottom: 20px; color: #4a5568;">
+                If you find our work useful, please consider citing:
+            </p>
+            <div class="citation-box">@article{cao2024masks,
+  title={Masks make discriminative models great again!},
+  author={Cao, Tianshi and Rakotosaona, Marie-Julie and Poole, Ben and Tombari, Federico and Niemeyer, Michael},
+  journal={arXiv preprint},
+  year={2024}
+}</div>
+        </div>
+
+        <footer>
+            <p>&copy; 2024 Image2GS Research Project</p>
+        </footer>
+    </div>
+
+    <script>
+        const additionalExamples = [
+            "viz/cebd5a9f9e912cfe_traj_all_target_preds.gif",
+            "viz/cdd7331ebf3d97dc_traj_all_target_preds.gif",
+            "viz/b36b4d6751d1a6e9_traj_all_target_preds.gif",
+            "viz/9e2a0ffcf3576fe2_traj_all_target_preds.gif",
+            "viz/35f89d3ac607bd5a_traj_all_target_preds.gif",
+            "viz/2405e175f0a00b92_traj_all_target_preds.gif",
+            "viz/ee135ea99ddcb32e_traj_all_target_preds.gif",
+            "viz/5937cff79f38b88b_traj_all_target_preds.gif",
+            "viz/ae956b54a63e137e_traj_all_target_preds.gif",
+            "viz/ffe67ac537febe41_traj_all_target_preds.gif"
+        ];
+        
+        let currentIndex = 0;
+        
+        function loadMoreExamples() {
+            const gallery = document.getElementById('gallery');
+            const button = event.target;
+            
+            // Add 4 more examples each time
+            for (let i = 0; i < 4 && currentIndex < additionalExamples.length; i++) {
+                const example = document.createElement('div');
+                example.className = 'example';
+                example.innerHTML = `
+                    <img src="${additionalExamples[currentIndex]}" alt="3D Scene Reconstruction Example ${currentIndex + 7}" loading="lazy">
+                    <div class="example-caption">3D Scene Reconstruction - Example ${currentIndex + 7}</div>
+                `;
+                gallery.appendChild(example);
+                currentIndex++;
+            }
+            
+            // Hide button if no more examples
+            if (currentIndex >= additionalExamples.length) {
+                button.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html> 
